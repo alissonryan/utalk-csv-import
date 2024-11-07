@@ -21,7 +21,10 @@
     "react-dom": "^18",
     "react-dropzone": "^14.3.5",
     "tailwind-merge": "^2.5.4",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "helmet": "^7.1.0",
+    "xss": "^1.0.14",
+    "@types/helmet": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^20",

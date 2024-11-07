@@ -1,6 +1,17 @@
-const API_BASE_URL = 'https://app-utalk.umbler.com/api'
-const API_TOKEN = 'n8n-umbler-talk-2024-05-24-2092-06-11--00F003308CA245056703E5C1AFFE801F8796B60223256A4C9410C74D487637AF'
-const ORGANIZATION_ID = 'Zk9RYvNhUpX9YKrM'
+const API_TOKEN = process.env.NEXT_PUBLIC_UTALK_API_TOKEN
+const ORGANIZATION_ID = process.env.NEXT_PUBLIC_UTALK_ORGANIZATION_ID
+const API_BASE_URL = '/api/utalk'
+
+// Validação mais amigável das credenciais
+if (!API_TOKEN) {
+  console.error('API_TOKEN não configurado')
+  throw new Error('Configuração incompleta: Token da API não encontrado')
+}
+
+if (!ORGANIZATION_ID) {
+  console.error('ORGANIZATION_ID não configurado')
+  throw new Error('Configuração incompleta: ID da Organização não encontrado')
+}
 
 interface CustomField {
   id: string
@@ -87,20 +98,51 @@ interface UpdateCustomFieldPayload {
 }
 
 export async function getOrganizations(): Promise<Organization[]> {
-  return [{
-    id: ORGANIZATION_ID,
-    name: 'Minha Organização',
-    customFields: []
-  }]
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/v1/organizations`, 
+      {
+        mode: 'cors',
+        headers: {
+          'Authorization': `Bearer ${API_TOKEN}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+      }
+    )
+
+    if (!response.ok) {
+      console.error('Erro ao buscar organizações:', await response.text())
+      // Fallback para organização padrão em caso de erro
+      return [{
+        id: ORGANIZATION_ID as string, // Type assertion para resolver erro de tipagem
+        name: 'Minha Organização',
+        customFields: []
+      }]
+    }
+
+    const data = await response.json()
+    return data || []
+  } catch (error) {
+    console.error('Erro ao buscar organizações:', error)
+    // Fallback para organização padrão em caso de erro
+    return [{
+      id: ORGANIZATION_ID as string,
+      name: 'Minha Organização',
+      customFields: []
+    }]
+  }
 }
 
 export async function getCustomFields(organizationId: string): Promise<CustomField[]> {
   const response = await fetch(
     `${API_BASE_URL}/v1/custom-field-definitions/?organizationId=${organizationId}`, 
     {
+      mode: 'cors',
       headers: {
         'Authorization': `Bearer ${API_TOKEN}`,
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
       },
     }
   )
@@ -141,9 +183,11 @@ export async function checkContact(organizationId: string, phone: string): Promi
     const contactResponse = await fetch(
       `${API_BASE_URL}/v1/contacts/phone/?organizationId=${organizationId}&phoneNumber=${phoneWithCountry}`,
       {
+        mode: 'cors',
         headers: {
           'Authorization': `Bearer ${API_TOKEN}`,
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
         },
       }
     )
@@ -246,54 +290,30 @@ export async function validateContactsList(organizationId: string, contacts: any
 }
 
 export async function createContact(payload: CreateContactPayload): Promise<any> {
-  console.log('Enviando payload:', JSON.stringify(payload, null, 2))
-
-  // Ajustando o formato do payload conforme a documentação
-  const formattedPayload = {
-    Name: payload.Name,
-    PhoneNumber: payload.PhoneNumber,
-    OrganizationId: payload.OrganizationId,
-    Address: {
-      AddressLine1: null,
-      AddressLine2: null,
-      City: null,
-      State: null,
-      ZipCode: null,
-      Country: "BR"
-    },
-    Landline: null,
-    Gender: null,
-    Email: null,
-    ProfilePictureUrl: null,
-    Source: null,
-    CustomFields: payload.CustomFields.map(field => ({
-      _t: "CreateContactTextCustomFieldModel",
-      Value: field.Value,
-      CustomFieldDefinitionId: field.CustomFieldDefinitionId,
-      OrganizationId: field.OrganizationId
-    }))
-  }
-
   try {
+    // Log seguro
+    console.log('Iniciando criação de contato')
+    
     const response = await fetch(`${API_BASE_URL}/v1/contacts`, {
       method: 'POST',
+      mode: 'cors',
       headers: {
         'Authorization': `Bearer ${API_TOKEN}`,
         'Accept': 'application/json',
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(formattedPayload)
+      body: JSON.stringify(payload)
     })
 
+    // Log de erro sem dados sensíveis
     if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Erro ao criar contato:', errorText)
-      throw new Error(`Falha ao criar contato: ${errorText}`)
+      console.error('Erro ao criar contato:', response.status)
+      throw new Error('Falha ao criar contato')
     }
 
     return response.json()
   } catch (error) {
-    console.error('Erro na chamada API:', error)
+    console.error('Erro na operação')
     throw error
   }
 }
@@ -308,25 +328,28 @@ export async function updateContactCustomField(
     throw new Error('ID do campo customizado inválido');
   }
 
-  const payload = {
+  const url = `${API_BASE_URL}/v1/contacts/${contactId}/custom-fields/${customFieldId}/?organizationId=${ORGANIZATION_ID}`;
+  console.log('Update URL:', url);
+  console.log('Update Payload:', {
     _t: "EditContactTextCustomFieldModel",
     Value: value,
     OrganizationId: ORGANIZATION_ID
-  };
-
-  const url = `${API_BASE_URL}/v1/contacts/${contactId}/custom-fields/${customFieldId}/?organizationId=${ORGANIZATION_ID}`;
-  console.log('Update URL:', url);
-  console.log('Update Payload:', payload);
+  });
 
   try {
     const response = await fetch(url, {
       method: 'PUT',
+      mode: 'cors',
       headers: {
         'Authorization': `Bearer ${API_TOKEN}`,
         'Accept': 'application/json',
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        _t: "EditContactTextCustomFieldModel",
+        Value: value,
+        OrganizationId: ORGANIZATION_ID
+      })
     });
 
     if (!response.ok) {
