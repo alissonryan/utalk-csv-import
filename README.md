@@ -33,13 +33,13 @@ Uma aplicação web construída com Next.js para importação em massa de contat
 
 1. Clone o repositório
 
-   ```git clone [(https://github.com/alissonryan/umbler-talk-topone.git)](https://github.com/alissonryan/umbler-talk-topone.git)```
+   ```git clone https://github.com/alissonryan/umbler-talk-topone.git```
 
 2. Instale as dependências
 
-   ```npm install
+   ```npm install```
    ou
-   yarn install```
+   ```yarn install```
 
 3. Configure as variáveis de ambiente criando um arquivo `.env.local`:
 
@@ -49,9 +49,9 @@ Uma aplicação web construída com Next.js para importação em massa de contat
 
 ## 🚀 Executando o Projeto
 
-```npm run dev
+```npm run dev```
 ou
-yarn dev```
+```yarn dev```
 
 ## 📦 Estrutura do Projeto
 
