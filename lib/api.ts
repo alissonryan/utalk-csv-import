@@ -96,6 +96,11 @@ interface UpdateCustomFieldPayload {
   OrganizationId: string
 }
 
+interface ApiResponse<T> {
+  data: T;
+  status: number;
+}
+
 export async function getOrganizations(): Promise<Organization[]> {
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/organizations/${ORGANIZATION_ID}/`, {
@@ -286,7 +291,7 @@ export async function validateContactsList(organizationId: string, contacts: any
   return results
 }
 
-export async function createContact(payload: CreateContactPayload): Promise<any> {
+export const createContact = async (data: CreateContactPayload): Promise<ApiResponse<Contact>> => {
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/contacts/`, {
       method: 'POST',
@@ -295,7 +300,7 @@ export async function createContact(payload: CreateContactPayload): Promise<any>
         'Accept': 'application/json',
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(data)
     })
 
     if (!response.ok) {
@@ -304,7 +309,10 @@ export async function createContact(payload: CreateContactPayload): Promise<any>
       throw new Error('Falha ao criar contato')
     }
 
-    return response.json()
+    return {
+      data: await response.json(),
+      status: response.status
+    }
   } catch (error) {
     console.error('Erro na operação:', error)
     throw error

@@ -554,27 +554,6 @@ export default function ImportWizard() {
     }
   }
 
-  // Adicione essa função para gerenciar os campos customizados
-  const getCustomFieldLabel = (fieldId: string) => {
-    const field = customFields.find(f => f.id === fieldId)
-    return field ? field.name : fieldId
-  }
-
-  const handleBackToStart = () => {
-    // Resetar todos os estados para o valor inicial
-    setCurrentStep('upload')
-    setFile(null)
-    setPreview([])
-    setMapping([])
-    setProgress(0)
-    setError(null)
-    setResults(null)
-    setMappingWithLabels([])
-    setValidatedContacts([])
-    setFilter('all')
-    setCurrentPage(1)
-  }
-
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6">
       {/* Barra de Progresso Global */}
