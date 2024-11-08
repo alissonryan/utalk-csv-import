@@ -156,6 +156,26 @@ const ProgressBar = ({ progress, message }: { progress: number; message: string 
   </div>
 );
 
+// Adicione esta função helper no início do componente
+const getPaginationRange = (currentPage: number, totalPages: number) => {
+  const delta = 2; // Número de páginas para mostrar antes e depois da página atual
+  const range: (number | string)[] = [];
+  
+  for (let i = 1; i <= totalPages; i++) {
+    if (
+      i === 1 || // Primeira página
+      i === totalPages || // Última página
+      (i >= currentPage - delta && i <= currentPage + delta) // Páginas próximas à atual
+    ) {
+      range.push(i);
+    } else if (range[range.length - 1] !== '...') {
+      range.push('...');
+    }
+  }
+  
+  return range;
+};
+
 export default function ImportWizard() {
   const [currentStep, setCurrentStep] = useState<ImportStep>('upload')
   const [file, setFile] = useState<File | null>(null)
@@ -763,7 +783,7 @@ export default function ImportWizard() {
 
             {/* Paginação */}
             {getFilteredContacts().totalPages > 1 && (
-              <div className="flex justify-center gap-2 mt-6">
+              <div className="flex justify-center items-center gap-2 mt-6">
                 <Button
                   variant="outline"
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
@@ -771,18 +791,26 @@ export default function ImportWizard() {
                 >
                   Anterior
                 </Button>
-                <div className="flex items-center gap-2">
-                  {Array.from({ length: getFilteredContacts().totalPages }, (_, i) => i + 1).map(page => (
-                    <Button
-                      key={page}
-                      variant={currentPage === page ? 'default' : 'outline'}
-                      onClick={() => setCurrentPage(page)}
-                      className="w-10 h-10 p-0"
-                    >
-                      {page}
-                    </Button>
+                
+                <div className="flex items-center gap-1">
+                  {getPaginationRange(currentPage, getFilteredContacts().totalPages).map((page, index) => (
+                    page === '...' ? (
+                      <span key={`ellipsis-${index}`} className="px-2">
+                        ...
+                      </span>
+                    ) : (
+                      <Button
+                        key={page}
+                        variant={currentPage === page ? 'default' : 'outline'}
+                        onClick={() => setCurrentPage(page as number)}
+                        className="w-10 h-10 p-0"
+                      >
+                        {page}
+                      </Button>
+                    )
                   ))}
                 </div>
+
                 <Button
                   variant="outline"
                   onClick={() => setCurrentPage(prev => Math.min(getFilteredContacts().totalPages, prev + 1))}
