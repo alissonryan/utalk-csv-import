@@ -120,14 +120,16 @@ const ContactRow: React.FC<ContactRowProps> = ({ fieldLabel, value, existingCont
   );
 };
 
+interface ImportResultDetail {
+  row: number;
+  error: string;
+}
+
 interface ImportResults {
-  success: number
-  errors: number
-  total: number
-  details: Array<{
-    row: number
-    error: string
-  }>
+  success: number;
+  errors: number;
+  total: number;
+  details: ImportResultDetail[];
 }
 
 export default function ImportWizard() {
@@ -137,7 +139,7 @@ export default function ImportWizard() {
   const [mapping, setMapping] = useState<ColumnMapping[]>([])
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
-  const [results, setResults] = useState<any>(null)
+  const [results, setResults] = useState<ImportResults | null>(null)
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [selectedOrg, setSelectedOrg] = useState<string>('')
   const [customFields, setCustomFields] = useState<CustomField[]>([])
@@ -778,7 +780,7 @@ export default function ImportWizard() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {results.details.map((detail, i) => (
+                    {results.details.map((detail: ImportResultDetail, i: number) => (
                       <tr key={i}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{detail.row}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">{detail.error}</td>

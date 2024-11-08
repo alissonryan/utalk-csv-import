@@ -1,6 +1,5 @@
 const API_TOKEN = process.env.NEXT_PUBLIC_UTALK_API_TOKEN
 const ORGANIZATION_ID = process.env.NEXT_PUBLIC_UTALK_ORGANIZATION_ID
-const API_BASE_URL = '/api/utalk'
 
 // Validação mais amigável das credenciais
 if (!API_TOKEN) {
@@ -99,32 +98,29 @@ interface UpdateCustomFieldPayload {
 
 export async function getOrganizations(): Promise<Organization[]> {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/v1/organizations`, 
-      {
-        mode: 'cors',
-        headers: {
-          'Authorization': `Bearer ${API_TOKEN}`,
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-      }
-    )
-
-    if (!response.ok) {
-      console.error('Erro ao buscar organizações:', await response.text())
-      // Fallback para organização padrão em caso de erro
-      return [{
-        id: ORGANIZATION_ID as string, // Type assertion para resolver erro de tipagem
-        name: 'Minha Organização',
-        customFields: []
-      }]
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/organizations/${ORGANIZATION_ID}/`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${API_TOKEN}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+    });
+    
+    if (!res.ok) {
+      throw new Error('Falha ao buscar organização');
     }
-
-    const data = await response.json()
-    return data || []
+    
+    const org = await res.json();
+    // Retornar um array com apenas a organização atual
+    return [{
+      id: org.id,
+      name: org.name,
+      customFields: []
+    }];
+    
   } catch (error) {
-    console.error('Erro ao buscar organizações:', error)
+    console.error('Erro ao buscar organização:', error)
     // Fallback para organização padrão em caso de erro
     return [{
       id: ORGANIZATION_ID as string,
@@ -135,30 +131,35 @@ export async function getOrganizations(): Promise<Organization[]> {
 }
 
 export async function getCustomFields(organizationId: string): Promise<CustomField[]> {
-  const response = await fetch(
-    `${API_BASE_URL}/v1/custom-field-definitions/?organizationId=${organizationId}`, 
-    {
-      mode: 'cors',
-      headers: {
-        'Authorization': `Bearer ${API_TOKEN}`,
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/custom-field-definitions/?organizationId=${organizationId}`, 
+      {
+        headers: {
+          'Authorization': `Bearer ${API_TOKEN}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+      }
+    )
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Erro na API:', errorText)
+      throw new Error('Falha ao buscar campos personalizados')
     }
-  )
 
-  if (!response.ok) {
-    console.error('Erro na API:', await response.text())
-    throw new Error('Falha ao buscar campos personalizados')
+    const data = await response.json()
+    return data || []
+  } catch (error) {
+    console.error('Erro completo:', error)
+    throw error
   }
-
-  const data = await response.json()
-  return data || []
 }
 
 export async function getContactCustomFields(organizationId: string, contactId: string): Promise<ContactCustomField[]> {
   const response = await fetch(
-    `${API_BASE_URL}/v1/contacts/${contactId}/custom-fields/?organizationId=${organizationId}`,
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/contacts/${contactId}/custom-fields/?organizationId=${organizationId}`,
     {
       headers: {
         'Authorization': `Bearer ${API_TOKEN}`,
@@ -178,12 +179,11 @@ export async function getContactCustomFields(organizationId: string, contactId: 
 export async function checkContact(organizationId: string, phone: string): Promise<Contact | null> {
   try {
     const formattedPhone = phone.replace(/\D/g, '')
-    const phoneWithCountry = `%2B55${formattedPhone}`
+    const phoneWithCountry = `+55${formattedPhone}`
 
-    const contactResponse = await fetch(
-      `${API_BASE_URL}/v1/contacts/phone/?organizationId=${organizationId}&phoneNumber=${phoneWithCountry}`,
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/contacts/phone/?organizationId=${organizationId}&phoneNumber=${encodeURIComponent(phoneWithCountry)}`,
       {
-        mode: 'cors',
         headers: {
           'Authorization': `Bearer ${API_TOKEN}`,
           'Accept': 'application/json',
@@ -192,53 +192,50 @@ export async function checkContact(organizationId: string, phone: string): Promi
       }
     )
 
-    if (contactResponse.status === 404) {
+    if (response.status === 404) {
       return null
     }
 
-    if (!contactResponse.ok) {
-      throw new Error('Falha ao verificar contato')
-    }
+    if (response.ok) {
+      const contact = await response.json()
 
-    const contactData = await contactResponse.json()
+      const customFieldsResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/contacts/${contact.id}/custom-fields/?organizationId=${organizationId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${API_TOKEN}`,
+            'Accept': 'application/json'
+          },
+        }
+      )
 
-    // Buscar campos customizados em seguida
-    const customFieldsResponse = await fetch(
-      `${API_BASE_URL}/v1/contacts/${contactData.id}/custom-fields/?organizationId=${organizationId}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${API_TOKEN}`,
-          'Accept': 'application/json'
-        },
+      if (!customFieldsResponse.ok) {
+        throw new Error('Falha ao buscar campos personalizados do contato')
       }
-    )
 
-    if (!customFieldsResponse.ok) {
-      throw new Error('Falha ao buscar campos personalizados do contato')
+      const customFieldsData = await customFieldsResponse.json()
+      const customFields: Record<string, string> = {}
+      
+      customFieldsData.forEach((field: ContactCustomFieldResponse) => {
+        customFields[field.customFieldDefinitionId] = field.value
+      })
+
+      return {
+        id: contact.id,
+        name: contact.name,
+        phoneNumber: contact.phoneNumber,
+        email: contact.email,
+        customFields,
+        lastActiveUTC: contact.lastActiveUTC,
+        createdAtUTC: contact.createdAtUTC
+      }
     }
 
-    const customFieldsData = await customFieldsResponse.json()
-    const customFields: Record<string, string> = {}
-    
-    // Mapear os campos customizados usando o customFieldDefinitionId como chave
-    customFieldsData.forEach((field: ContactCustomFieldResponse) => {
-      customFields[field.customFieldDefinitionId] = field.value
-    })
-
-    // Retornar o contato com todos os dados necessários
-    return {
-      id: contactData.id,
-      name: contactData.name,
-      phoneNumber: contactData.phoneNumber,
-      email: contactData.email,
-      customFields,
-      lastActiveUTC: contactData.lastActiveUTC,
-      createdAtUTC: contactData.createdAtUTC
-    }
+    throw new Error('Falha ao verificar contato')
 
   } catch (error) {
-    console.error('Erro completo:', error)
-    throw error
+    console.error('Erro ao verificar contato:', error)
+    return null
   }
 }
 
@@ -291,12 +288,8 @@ export async function validateContactsList(organizationId: string, contacts: any
 
 export async function createContact(payload: CreateContactPayload): Promise<any> {
   try {
-    // Log seguro
-    console.log('Iniciando criação de contato')
-    
-    const response = await fetch(`${API_BASE_URL}/v1/contacts`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/contacts/`, {
       method: 'POST',
-      mode: 'cors',
       headers: {
         'Authorization': `Bearer ${API_TOKEN}`,
         'Accept': 'application/json',
@@ -305,15 +298,15 @@ export async function createContact(payload: CreateContactPayload): Promise<any>
       body: JSON.stringify(payload)
     })
 
-    // Log de erro sem dados sensíveis
     if (!response.ok) {
-      console.error('Erro ao criar contato:', response.status)
+      const errorText = await response.text()
+      console.error('Erro ao criar contato:', response.status, errorText)
       throw new Error('Falha ao criar contato')
     }
 
     return response.json()
   } catch (error) {
-    console.error('Erro na operação')
+    console.error('Erro na operação:', error)
     throw error
   }
 }
@@ -323,44 +316,110 @@ export async function updateContactCustomField(
   customFieldId: string,
   value: string
 ): Promise<any> {
-  // Validar se é um campo customizado válido
-  if (!customFieldId || (customFieldId.length !== 16 && customFieldId.length !== 24)) {
-    throw new Error('ID do campo customizado inválido');
-  }
-
-  const url = `${API_BASE_URL}/v1/contacts/${contactId}/custom-fields/${customFieldId}/?organizationId=${ORGANIZATION_ID}`;
-  console.log('Update URL:', url);
-  console.log('Update Payload:', {
-    _t: "EditContactTextCustomFieldModel",
-    Value: value,
-    OrganizationId: ORGANIZATION_ID
-  });
-
   try {
-    const response = await fetch(url, {
-      method: 'PUT',
-      mode: 'cors',
-      headers: {
-        'Authorization': `Bearer ${API_TOKEN}`,
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        _t: "EditContactTextCustomFieldModel",
-        Value: value,
-        OrganizationId: ORGANIZATION_ID
-      })
-    });
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/contacts/${contactId}/custom-fields/${customFieldId}/?organizationId=${ORGANIZATION_ID}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${API_TOKEN}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          _t: "EditContactTextCustomFieldModel",
+          Value: value,
+          OrganizationId: ORGANIZATION_ID
+        })
+      }
+    )
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Erro ao atualizar campo customizado:', errorText);
-      throw new Error(`Falha ao atualizar campo customizado: ${errorText}`);
+      const errorText = await response.text()
+      console.error('Erro ao atualizar campo customizado:', errorText)
+      throw new Error(`Falha ao atualizar campo customizado: ${errorText}`)
     }
 
-    return response.json();
+    return response.json()
   } catch (error) {
-    console.error('Erro na chamada API:', error);
-    throw error;
+    console.error('Erro na chamada API:', error)
+    throw error
   }
+}
+
+export async function processContacts(
+  validatedContacts: ValidatedContact[],
+  customFields: CustomField[],
+  onProgress: (progress: number) => void
+): Promise<ImportResults> {
+  const results: ImportResults = {
+    success: 0,
+    errors: 0,
+    total: validatedContacts.length,
+    details: []
+  }
+
+  let processed = 0
+
+  for (const contact of validatedContacts) {
+    try {
+      if (contact.existingContact) {
+        // Atualizar campos customizados para contatos existentes
+        for (const [key, value] of Object.entries(contact.csvData)) {
+          const customField = customFields.find(cf => cf.name === key)
+          if (customField) {
+            await updateContactCustomField(
+              contact.existingContact.id,
+              customField.id,
+              value
+            )
+          }
+        }
+        results.success++
+      } else {
+        // Criar novo contato
+        const payload: CreateContactPayload = {
+          Name: contact.csvData['Nome'],
+          PhoneNumber: `+55${contact.csvData['Telefone'].replace(/\D/g, '')}`,
+          OrganizationId: ORGANIZATION_ID as string,
+          Address: {
+            AddressLine1: null,
+            AddressLine2: null,
+            City: null,
+            State: null,
+            ZipCode: null,
+            Country: "BR"
+          },
+          Landline: null,
+          Gender: null,
+          Email: null,
+          ProfilePictureUrl: null,
+          Source: null,
+          CustomFields: customFields
+            .filter(cf => contact.csvData[cf.name])
+            .map(cf => ({
+              _t: "CreateContactTextCustomFieldModel",
+              Value: contact.csvData[cf.name],
+              CustomFieldDefinitionId: cf.id,
+              OrganizationId: ORGANIZATION_ID as string
+            }))
+        }
+
+        await createContact(payload)
+        results.success++
+      }
+    } catch (error) {
+      console.error('Erro ao processar contato:', error)
+      results.errors++
+      results.details.push({
+        row: processed + 1,
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      })
+    }
+
+    processed++
+    onProgress(Math.round((processed / validatedContacts.length) * 100))
+  }
+
+  return results
 } 
