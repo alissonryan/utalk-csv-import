@@ -846,9 +846,32 @@ export default function ImportWizard() {
       </div>
 
       <div className="mt-8 flex justify-end gap-4">
-        <Button variant="primary" onClick={() => setCurrentStep(1)}>
-          Voltar para o início
-        </Button>
+        {currentStep === 'results' ? (
+          <Button variant="default" onClick={() => setCurrentStep('upload')}>
+            Voltar para o início
+          </Button>
+        ) : (
+          <>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                const steps: ImportStep[] = ['upload', 'mapping', 'validation', 'processing', 'results']
+                const currentIndex = steps.indexOf(currentStep)
+                if (currentIndex > 0) {
+                  setCurrentStep(steps[currentIndex - 1])
+                }
+              }}
+            >
+              Voltar
+            </Button>
+            <Button 
+              variant="default" 
+              onClick={handleNext}
+            >
+              Próximo
+            </Button>
+          </>
+        )}
       </div>
     </div>
   )
