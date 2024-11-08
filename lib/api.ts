@@ -101,6 +101,21 @@ interface ApiResponse<T> {
   status: number;
 }
 
+interface ValidatedContact {
+  csvData: Record<string, string>;
+  existingContact?: Contact;
+}
+
+interface ImportResults {
+  success: number;
+  errors: number;
+  total: number;
+  details: Array<{
+    row: number;
+    error: string;
+  }>;
+}
+
 export async function getOrganizations(): Promise<Organization[]> {
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/organizations/${ORGANIZATION_ID}/`, {
@@ -379,7 +394,7 @@ export async function processContacts(
             await updateContactCustomField(
               contact.existingContact.id,
               customField.id,
-              value
+              String(value)
             )
           }
         }
