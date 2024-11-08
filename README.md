@@ -43,10 +43,10 @@ Uma aplicação web construída com Next.js para importação em massa de contat
 
 3. Configure as variáveis de ambiente criando um arquivo `.env.local`:
 
-   ``` NEXT_PUBLIC_API_BASE_URL=https://app-utalk.umbler.com/api
+``` NEXT_PUBLIC_API_BASE_URL=https://app-utalk.umbler.com/api
     NEXT_PUBLIC_UTALK_API_TOKEN=seu-token-aqui
-    NEXT_PUBLIC_UTALK_ORGANIZATION_ID=seu-id-org-aqui```
-
+    NEXT_PUBLIC_UTALK_ORGANIZATION_ID=seu-id-org-aqui
+```
 ## 🚀 Executando o Projeto
 
 ```npm run dev```
