@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Stepper } from '@/components/ui/stepper'
 import { Alert } from '@/components/ui/alert'
-import { getOrganizations, getCustomFields, validateContactsList, getContactCustomFields, createContact, updateContactCustomField } from '@/lib/api'
+import { getOrganizations, getCustomFields, checkContact, createContact, updateContactCustomField } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 type ImportStep = 'upload' | 'mapping' | 'validation' | 'processing' | 'results'
@@ -132,6 +132,30 @@ interface ImportResults {
   details: ImportResultDetail[];
 }
 
+// Adicionar novo componente para a barra de progresso
+const ProgressBar = ({ progress, message }: { progress: number; message: string }) => (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="bg-white p-8 rounded-lg shadow-lg w-96 space-y-6">
+      <div className="text-center space-y-2">
+        <h3 className="text-lg font-semibold text-gray-900">
+          Validando Contatos
+        </h3>
+        <p className="text-sm text-gray-500">
+          Por favor, não feche esta tela enquanto a validação está em andamento.
+        </p>
+      </div>
+      
+      <div className="space-y-3">
+        <div className="flex justify-between text-sm text-gray-600">
+          <span>{message}</span>
+          <span>{progress}%</span>
+        </div>
+        <Progress value={progress} />
+      </div>
+    </div>
+  </div>
+);
+
 export default function ImportWizard() {
   const [currentStep, setCurrentStep] = useState<ImportStep>('upload')
   const [file, setFile] = useState<File | null>(null)
@@ -148,6 +172,11 @@ export default function ImportWizard() {
   const [filter, setFilter] = useState<'all' | 'new' | 'existing'>('all')
   const [currentPage, setCurrentPage] = useState(1)
   const ITEMS_PER_PAGE = 10
+
+  // Adicionar estados para controle de progresso
+  const [showProgress, setShowProgress] = useState(false)
+  const [progressMessage, setProgressMessage] = useState('')
+  const [progressValue, setProgressValue] = useState(0)
 
   // Buscar organizações ao montar o componente
   useEffect(() => {
@@ -178,7 +207,6 @@ export default function ImportWizard() {
       }
 
       Papa.parse(file, {
-        preview: 5,
         header: true,
         complete: (results) => {
           setPreview(results.data)
@@ -290,28 +318,64 @@ export default function ImportWizard() {
     }
   }
 
+  // Modificar a função validateContacts
   const validateContacts = async () => {
     try {
-      const results = await validateContactsList(selectedOrg, preview)
-      console.log('API Results:', results); // Debug
+      setShowProgress(true)
+      setProgressMessage('Verificando contatos na base...')
+      setProgressValue(0)
+      
+      const total = preview.length
+      let processed = 0
 
-      const contacts = [
-        ...results.newContacts.map(c => ({ csvData: c.csvData })),
-        ...results.existingContacts.map(c => ({
-          csvData: c.csvData,
-          existingContact: {
-            ...c.existingContact,
-            customFields: c.existingContact.customFields || {}
+      const results = {
+        newContacts: [] as ValidatedContact[],
+        existingContacts: [] as ValidatedContact[]
+      }
+
+      for (const contact of preview) {
+        const phoneColumn = Object.keys(contact).find(key => 
+          key.toLowerCase().includes('telefone') || 
+          key.toLowerCase().includes('phone')
+        )
+
+        if (phoneColumn) {
+          try {
+            const phone = contact[phoneColumn]
+            const existingContact = await checkContact(selectedOrg, phone)
+
+            if (existingContact) {
+              results.existingContacts.push({
+                csvData: contact,
+                existingContact: {
+                  ...existingContact,
+                  customFields: existingContact.customFields || {}
+                }
+              })
+            } else {
+              results.newContacts.push({
+                csvData: contact
+              })
+            }
+          } catch (error) {
+            console.error('Error validating contact:', error)
+            results.newContacts.push({
+              csvData: contact
+            })
           }
-        }))
-      ];
+        }
 
-      console.log('Processed Contacts:', contacts); // Debug
-      setValidatedContacts(contacts)
+        processed++
+        setProgressValue(Math.round((processed / total) * 100))
+      }
+
+      setValidatedContacts([...results.newContacts, ...results.existingContacts])
       setCurrentStep('validation')
     } catch (error) {
-      console.error('Validation Error:', error);
+      console.error('Validation Error:', error)
       setError(error instanceof Error ? error.message : 'Erro ao validar contatos')
+    } finally {
+      setShowProgress(false)
     }
   }
 
@@ -513,6 +577,14 @@ export default function ImportWizard() {
 
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6">
+      {/* Barra de Progresso Global */}
+      {showProgress && (
+        <ProgressBar 
+          progress={progressValue} 
+          message={progressMessage}
+        />
+      )}
+
       <Stepper 
         steps={[
           'Upload do Arquivo',
@@ -795,39 +867,26 @@ export default function ImportWizard() {
       </div>
 
       <div className="mt-8 flex justify-end gap-4">
-        {currentStep === 'results' ? (
-          // Na etapa de resultados, mostrar apenas o botão de voltar ao início
-          <Button
-            onClick={handleBackToStart}
-            className="bg-primary hover:bg-primary/90"
-          >
-            Voltar para o Início
-          </Button>
-        ) : (
-          // Nas outras etapas, manter os botões de voltar e próximo
-          <>
-            <Button
-              variant="outline"
-              onClick={() => {
-                const steps: ImportStep[] = ['upload', 'mapping', 'validation', 'processing', 'results']
-                const currentIndex = steps.indexOf(currentStep)
-                if (currentIndex > 0) {
-                  setCurrentStep(steps[currentIndex - 1])
-                }
-              }}
-              disabled={currentStep === 'upload' || currentStep === 'processing'}
-            >
-              Voltar
-            </Button>
+        <Button
+          variant="outline"
+          onClick={() => {
+            const steps: ImportStep[] = ['upload', 'mapping', 'validation', 'processing', 'results']
+            const currentIndex = steps.indexOf(currentStep)
+            if (currentIndex > 0) {
+              setCurrentStep(steps[currentIndex - 1])
+            }
+          }}
+          disabled={currentStep === 'upload' || currentStep === 'processing' || showProgress}
+        >
+          Voltar
+        </Button>
 
-            <Button
-              onClick={handleNext}
-              disabled={currentStep === 'processing'}
-            >
-              {currentStep === 'validation' ? 'Iniciar Importação' : 'Próximo'}
-            </Button>
-          </>
-        )}
+        <Button
+          onClick={handleNext}
+          disabled={currentStep === 'processing' || showProgress}
+        >
+          {currentStep === 'validation' ? 'Iniciar Importação' : 'Próximo'}
+        </Button>
       </div>
     </div>
   )
