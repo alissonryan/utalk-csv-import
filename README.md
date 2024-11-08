@@ -33,25 +33,36 @@ Uma aplicação web construída com Next.js para importação em massa de contat
 
 1. Clone o repositório
 
-   ```git clone https://github.com/alissonryan/umbler-talk-topone.git```
+   ```
+   git clone https://github.com/alissonryan/umbler-talk-topone.git
+   ```
 
 2. Instale as dependências
 
-   ```npm install```
+   ```
+   npm install
+   ```
    ou
-   ```yarn install```
+   ```
+   yarn install
+   ```
 
 3. Configure as variáveis de ambiente criando um arquivo `.env.local`:
 
-``` NEXT_PUBLIC_API_BASE_URL=https://app-utalk.umbler.com/api
-    NEXT_PUBLIC_UTALK_API_TOKEN=seu-token-aqui
-    NEXT_PUBLIC_UTALK_ORGANIZATION_ID=seu-id-org-aqui
+``` 
+NEXT_PUBLIC_API_BASE_URL=https://app-utalk.umbler.com/api
+NEXT_PUBLIC_UTALK_API_TOKEN=seu-token-aqui
+NEXT_PUBLIC_UTALK_ORGANIZATION_ID=seu-id-org-aqui
 ```
 ## 🚀 Executando o Projeto
 
-```npm run dev```
+```
+npm run dev
+```
 ou
-```yarn dev```
+```
+yarn dev
+```
 
 ## 📦 Estrutura do Projeto
 
