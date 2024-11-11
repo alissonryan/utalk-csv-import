@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Sidebar } from '@/components/Sidebar'
 import { SidebarProvider } from '@/components/ui/sidebar'
+import { MainContent } from '@/components/MainContent'
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -29,11 +30,9 @@ export default function RootLayout({
     <html lang="pt-BR" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="min-h-screen">
         <SidebarProvider>
-          <div className="flex h-screen">
+          <div className="flex h-screen w-full">
             <Sidebar />
-            <main className="flex-1 overflow-auto p-6">
-              {children}
-            </main>
+            <MainContent>{children}</MainContent>
           </div>
         </SidebarProvider>
       </body>

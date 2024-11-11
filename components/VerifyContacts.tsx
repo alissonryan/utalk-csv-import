@@ -209,11 +209,12 @@ export function VerifyContacts() {
   }
 
   return (
-    <div className="h-full flex flex-col w-full">
-      <div className="space-y-6 mb-6">
+    <div className="flex flex-col h-full w-full">
+      {/* Cabeçalho fixo */}
+      <div className="p-6 space-y-6 bg-white w-full">
         <h1 className="text-2xl font-bold">Verificar Contatos</h1>
 
-        {/* Card da Organização no novo padrão */}
+        {/* Card da Organização */}
         {organization && (
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
             <div className="flex items-center gap-3">
@@ -224,9 +225,9 @@ export function VerifyContacts() {
                   className="w-8 h-8 rounded-full object-cover"
                 />
               )}
-              <div className="flex flex-col">
+              <div>
                 <span className="font-medium">{organization.name}</span>
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-gray-500 block">
                   ID: {organization.id}
                 </span>
               </div>
@@ -234,7 +235,47 @@ export function VerifyContacts() {
           </div>
         )}
 
-        {/* Botões de download movidos para depois do card */}
+        {/* Área de Upload */}
+        {contacts.length === 0 && (
+          <div
+            {...getRootProps()}
+            className={cn(
+              "border-2 border-dashed rounded-lg p-12",
+              "transition-colors cursor-pointer",
+              "hover:border-primary/50 hover:bg-accent/5",
+              "flex flex-col items-center justify-center text-center",
+              isDragActive ? "border-primary/50 bg-accent/5" : "border-gray-200"
+            )}
+          >
+            <input {...getInputProps()} />
+            <div className="flex flex-col items-center gap-2">
+              <div className="p-3 rounded-full bg-primary/5">
+                <svg
+                  className="w-6 h-6 text-primary"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                  />
+                </svg>
+              </div>
+              <div className="text-sm">
+                <span className="text-primary font-medium">
+                  Clique para fazer upload
+                </span>{" "}
+                ou arraste e solte
+              </div>
+              <p className="text-xs text-gray-500">CSV (max. 5MB)</p>
+            </div>
+          </div>
+        )}
+
+        {/* Botões de download */}
         {contacts.length > 0 && (
           <div className="flex gap-2">
             <Button 
@@ -243,87 +284,72 @@ export function VerifyContacts() {
             >
               Baixar XLSX
             </Button>
-            <Button onClick={downloadCSV}>
+            <Button 
+              onClick={downloadCSV}
+            >
               Baixar CSV
             </Button>
           </div>
         )}
-      </div>
 
-      {error && (
-        <Alert 
-          variant="destructive" 
-          onClose={() => setError(null)}
-          className="mb-6"
-        >
-          {error}
-        </Alert>
-      )}
-
-      <div className="flex-1 min-h-0 w-full">
-        {contacts.length === 0 ? (
-          <div 
-            {...getRootProps()} 
-            className={cn(
-              "w-full h-[200px] border-2 border-dashed rounded-lg p-8 text-center cursor-pointer flex items-center justify-center",
-              isDragActive ? "border-primary bg-primary/5" : "border-gray-300"
-            )}
+        {error && (
+          <Alert 
+            variant="destructive" 
+            onClose={() => setError(null)}
           >
-            <input {...getInputProps()} />
-            <div className="flex flex-col items-center gap-4">
-              <svg className="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
-              <div>
-                <p className="text-lg font-medium mb-1">Arraste um arquivo CSV ou clique para selecionar</p>
-                <p className="text-sm text-gray-500">Máximo: 5MB</p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col h-full">
-            <div className="flex-1 border rounded-lg overflow-hidden mb-4">
-              <div className="overflow-auto h-full w-full">
-                <table className="w-full table-fixed divide-y divide-gray-200">
-                  <thead className="bg-gray-50 sticky top-0">
-                    <tr>
-                      <th className="w-[30%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nome</th>
-                      <th className="w-[25%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Telefone</th>
-                      <th className="w-[20%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Último Contato</th>
-                      <th className="w-[25%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tags</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {contacts.map((contact, i) => (
-                      <tr key={i}>
-                        <td className="px-6 py-4 text-sm truncate">{contact.name}</td>
-                        <td className="px-6 py-4 text-sm truncate">{contact.phoneNumber}</td>
-                        <td className="px-6 py-4 text-sm truncate">
-                          {formatLastActive(contact.lastActiveUTC)}
-                        </td>
-                        <td className="px-6 py-4 text-sm truncate">
-                          {contact.tags.map(tag => tag.name).join(', ')}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <div className="flex justify-center">
-              <Button 
-                onClick={() => setContacts([])} 
-                variant="default"
-                size="lg"
-                className="px-8 py-6 text-lg bg-blue-600 hover:bg-blue-700 transition-colors"
-              >
-                Fazer nova consulta
-              </Button>
-            </div>
-          </div>
+            {error}
+          </Alert>
         )}
       </div>
 
+      {/* Container da tabela com scroll */}
+      {contacts.length > 0 && (
+        <div className="flex-1 flex flex-col min-h-0 w-full">
+          <div className="flex-1 overflow-y-auto w-full">
+            <table className="w-full table-fixed">
+              <thead className="bg-gray-50 sticky top-0">
+                <tr>
+                  <th className="w-[30%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
+                  <th className="w-[25%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Telefone</th>
+                  <th className="w-[20%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Último Contato</th>
+                  <th className="w-[25%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tags</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {contacts.map((contact, i) => (
+                  <tr key={i} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm">{contact.name}</td>
+                    <td className="px-6 py-4 text-sm">{contact.phoneNumber}</td>
+                    <td className="px-6 py-4 text-sm">
+                      {formatLastActive(contact.lastActiveUTC)}
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                      {contact.tags.map(tag => tag.name).join(', ')}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Botão Nova Consulta - Fixo no rodapé */}
+          <div className="p-6 bg-white border-t w-full">
+            <div className="flex justify-center">
+              <Button
+                onClick={() => {
+                  setContacts([]);
+                  setError(null);
+                }}
+                variant="outline"
+              >
+                Nova Consulta
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dialog de processamento */}
       <Dialog open={isProcessing} onOpenChange={setIsProcessing}>
         <DialogContent className="sm:max-w-md" showClose={false}>
           <DialogHeader>
