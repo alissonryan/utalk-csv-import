@@ -1,19 +1,16 @@
 console.log('ENV:', {
-  API_TOKEN: process.env.UTALK_API_TOKEN,
-  ORGANIZATION_ID: process.env.ORGANIZATION_ID
+  API_TOKEN: process.env.NEXT_PUBLIC_UTALK_API_TOKEN,
+  ORGANIZATION_ID: process.env.NEXT_PUBLIC_UTALK_ORGANIZATION_ID
 })
 
-const API_TOKEN = process.env.UTALK_API_TOKEN
-const ORGANIZATION_ID = process.env.ORGANIZATION_ID
+const API_TOKEN = process.env.NEXT_PUBLIC_UTALK_API_TOKEN
+const ORGANIZATION_ID = process.env.NEXT_PUBLIC_UTALK_ORGANIZATION_ID
 
-// Validação mais amigável das credenciais
 if (!API_TOKEN) {
-  console.error('API_TOKEN não configurado')
   throw new Error('Configuração incompleta: Token da API não encontrado')
 }
 
 if (!ORGANIZATION_ID) {
-  console.error('ORGANIZATION_ID não configurado')
   throw new Error('Configuração incompleta: ID da Organização não encontrado')
 }
 
