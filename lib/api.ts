@@ -1,5 +1,10 @@
-const API_TOKEN = process.env.NEXT_PUBLIC_UTALK_API_TOKEN
-const ORGANIZATION_ID = process.env.NEXT_PUBLIC_UTALK_ORGANIZATION_ID
+console.log('ENV:', {
+  API_TOKEN: process.env.UTALK_API_TOKEN,
+  ORGANIZATION_ID: process.env.ORGANIZATION_ID
+})
+
+const API_TOKEN = process.env.UTALK_API_TOKEN
+const ORGANIZATION_ID = process.env.ORGANIZATION_ID
 
 // Validação mais amigável das credenciais
 if (!API_TOKEN) {
