@@ -137,10 +137,10 @@ const ContactRow: React.FC<ContactRowProps> = ({ fieldLabel, value, existingCont
 };
 
 interface ImportResultDetail {
-  row: number;
-  error: string;
-  name?: string;
-  phone?: string;
+  row: number
+  error: string
+  name: string | undefined
+  phone: string | undefined
 }
 
 interface ImportResults {
@@ -427,11 +427,11 @@ export default function ImportWizard() {
         let processed = 0
         let processedNew = 0
         let processedExisting = 0
-        const results = {
+        const results: ImportResults = {
           success: 0,
           errors: 0,
           total,
-          details: [] as Array<{ row: number; error: string }>
+          details: []
         }
 
         // Processar novos contatos primeiro
@@ -514,8 +514,8 @@ export default function ImportWizard() {
             results.details.push({
               row: processed + 1,
               error: error instanceof Error ? error.message : 'Erro desconhecido',
-              name: nameValue,
-              phone: phoneValue
+              name: nameValue || undefined,
+              phone: phoneValue || undefined
             })
           }
         }
