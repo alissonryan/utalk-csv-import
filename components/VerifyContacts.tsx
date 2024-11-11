@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import Papa from 'papaparse'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -55,20 +55,6 @@ export function VerifyContacts() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [processedCount, setProcessedCount] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
-  const [organization, setOrganization] = useState<OrganizationDetails | null>(null)
-
-  useEffect(() => {
-    async function loadOrganization() {
-      try {
-        const orgDetails = await getOrganizationDetails(process.env.NEXT_PUBLIC_UTALK_ORGANIZATION_ID!)
-        setOrganization(orgDetails)
-      } catch (error) {
-        console.error('Erro ao carregar organização:', error)
-      }
-    }
-    
-    loadOrganization()
-  }, [])
 
   const verifyContact = async (phone: string): Promise<Contact | null> => {
     try {
@@ -210,30 +196,8 @@ export function VerifyContacts() {
 
   return (
     <div className="flex flex-col h-full w-full">
-      {/* Cabeçalho fixo */}
       <div className="p-6 space-y-6 bg-white w-full">
         <h1 className="text-2xl font-bold">Verificar Contatos</h1>
-
-        {/* Card da Organização */}
-        {organization && (
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-            <div className="flex items-center gap-3">
-              {organization.iconUrl && (
-                <img 
-                  src={organization.iconUrl} 
-                  alt={organization.name}
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-              )}
-              <div>
-                <span className="font-medium">{organization.name}</span>
-                <span className="text-sm text-gray-500 block">
-                  ID: {organization.id}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Área de Upload */}
         {contacts.length === 0 && (

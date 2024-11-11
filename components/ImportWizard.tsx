@@ -227,8 +227,6 @@ export default function ImportWizard() {
   const [progressMessage, setProgressMessage] = useState('')
   const [progressValue, setProgressValue] = useState(0)
 
-  const [orgDetails, setOrgDetails] = useState<OrganizationDetails | null>(null);
-
   // Buscar organizações ao montar o componente
   useEffect(() => {
     const loadOrganizations = async () => {
@@ -259,21 +257,6 @@ export default function ImportWizard() {
 
     loadCustomFields();
   }, [selectedOrg]); // Dependência alterada para selectedOrg
-
-  useEffect(() => {
-    const loadOrgDetails = async () => {
-      if (!selectedOrg) return;
-      
-      try {
-        const details = await getOrganizationDetails(selectedOrg);
-        setOrgDetails(details);
-      } catch (error) {
-        console.error('Erro ao carregar detalhes da organização:', error);
-      }
-    };
-
-    loadOrgDetails();
-  }, [selectedOrg]);
 
   useEffect(() => {
     setSelectedOrg(process.env.NEXT_PUBLIC_UTALK_ORGANIZATION_ID as string);
@@ -715,29 +698,6 @@ export default function ImportWizard() {
         <div className="space-y-6">
           {currentStep === STEPS.UPLOAD && (
             <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Organização</h2>
-              
-              {/* Card com detalhes da organização */}
-              {orgDetails && (
-                <div className="bg-white rounded-lg border p-4 flex items-center gap-4">
-                  {orgDetails.iconUrl && (
-                    <img 
-                      src={orgDetails.iconUrl} 
-                      alt={orgDetails.name}
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
-                  )}
-                  <div>
-                    <h3 className="font-medium text-gray-900">
-                      {orgDetails.name}
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      ID: {orgDetails.id}
-                    </p>
-                  </div>
-                </div>
-              )}
-              
               {/* Área de upload do arquivo */}
               <div
                 {...getRootProps()}
