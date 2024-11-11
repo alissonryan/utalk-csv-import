@@ -7,10 +7,12 @@ const API_TOKEN = process.env.NEXT_PUBLIC_UTALK_API_TOKEN
 const ORGANIZATION_ID = process.env.NEXT_PUBLIC_UTALK_ORGANIZATION_ID
 
 if (!API_TOKEN) {
+  console.error('API_TOKEN não configurado')
   throw new Error('Configuração incompleta: Token da API não encontrado')
 }
 
 if (!ORGANIZATION_ID) {
+  console.error('ORGANIZATION_ID não configurado')
   throw new Error('Configuração incompleta: ID da Organização não encontrado')
 }
 
@@ -25,6 +27,7 @@ interface Organization {
   id: string
   name: string
   customFields: CustomField[]
+  iconUrl?: string
 }
 
 interface ContactCustomField {
@@ -118,9 +121,21 @@ interface ImportResults {
   }>;
 }
 
+interface OrganizationDetails {
+  name: string;
+  iconUrl: string;
+  id: string;
+  createdAtUTC: string;
+  financeEmail: string | null;
+  financeWhatsapp: string | null;
+  cnpj: string | null;
+  socialReason: string | null;
+  phone: string | null;
+}
+
 export async function getOrganizations(): Promise<Organization[]> {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/organizations/${ORGANIZATION_ID}/`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/organizations/${ORGANIZATION_ID}/details/`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${API_TOKEN}`,
@@ -134,33 +149,34 @@ export async function getOrganizations(): Promise<Organization[]> {
     }
     
     const org = await res.json();
-    // Retornar um array com apenas a organização atual
+    // Retornar um array com a organização atual incluindo o iconUrl
     return [{
       id: org.id,
       name: org.name,
-      customFields: []
+      customFields: [],
+      iconUrl: org.iconUrl
     }];
     
   } catch (error) {
     console.error('Erro ao buscar organização:', error)
-    // Fallback para organização padrão em caso de erro
-    return [{
-      id: ORGANIZATION_ID as string,
-      name: 'Minha Organização',
-      customFields: []
-    }]
+    throw error;
   }
 }
 
 export async function getCustomFields(organizationId: string): Promise<CustomField[]> {
+  if (!organizationId) {
+    throw new Error('OrganizationId é obrigatório');
+  }
+
   try {
+    console.log('Buscando campos customizados para org:', organizationId)
+    
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/custom-field-definitions/?organizationId=${organizationId}`, 
       {
         headers: {
           'Authorization': `Bearer ${API_TOKEN}`,
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
+          'Accept': 'application/json'
         },
       }
     )
@@ -172,7 +188,14 @@ export async function getCustomFields(organizationId: string): Promise<CustomFie
     }
 
     const data = await response.json()
-    return data || []
+    console.log('Campos customizados retornados:', data)
+
+    return data.map((field: any) => ({
+      id: field.id,
+      name: field.name,
+      type: field._t,
+      required: false
+    }))
   } catch (error) {
     console.error('Erro completo:', error)
     throw error
@@ -448,3 +471,32 @@ export async function processContacts(
 
   return results
 } 
+
+export async function getOrganizationDetails(organizationId: string): Promise<OrganizationDetails> {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/organizations/${organizationId}/details/`,
+      {
+        headers: {
+          'Authorization': `Bearer ${API_TOKEN}`,
+          'Accept': 'application/json'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Falha ao buscar detalhes da organização');
+    }
+
+    const data = await response.json();
+    return {
+      name: data.name,
+      iconUrl: data.iconUrl,
+      id: data.id,
+      createdAtUTC: data.createdAtUTC
+    };
+  } catch (error) {
+    console.error('Erro ao buscar detalhes da organização:', error);
+    throw error;
+  }
+}

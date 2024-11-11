@@ -13,8 +13,10 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
 } from "@/components/ui/select"
-import { getOrganizations, getCustomFields, checkContact, createContact, updateContactCustomField } from '@/lib/api'
+import { getOrganizations, getCustomFields, checkContact, createContact, updateContactCustomField, getOrganizationDetails } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 // Defina as etapas e seus tipos
@@ -44,6 +46,7 @@ interface Organization {
   id: string
   name: string
   customFields: CustomField[]
+  iconUrl?: string
 }
 
 interface MappingWithLabel extends ColumnMapping {
@@ -194,6 +197,14 @@ const getPaginationRange = (currentPage: number, totalPages: number) => {
   return range;
 };
 
+// Adicione a interface OrganizationDetails
+interface OrganizationDetails {
+  name: string;
+  iconUrl: string;
+  id: string;
+  createdAtUTC: string;
+}
+
 export default function ImportWizard() {
   const [currentStep, setCurrentStep] = useState<Step>(STEPS.UPLOAD)
   const [file, setFile] = useState<File | null>(null)
@@ -204,7 +215,7 @@ export default function ImportWizard() {
   const [results, setResults] = useState<ImportResults | null>(null)
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [selectedOrg, setSelectedOrg] = useState<string>('')
-  const [customFields, setCustomFields] = useState<CustomField[]>([])
+  const [customFields, setCustomFields] = useState<Array<{ name: string; id: string; type: string }>>([])
   const [mappingWithLabels, setMappingWithLabels] = useState<MappingWithLabel[]>([])
   const [validatedContacts, setValidatedContacts] = useState<ValidatedContact[]>([])
   const [filter, setFilter] = useState<'all' | 'new' | 'existing'>('all')
@@ -216,21 +227,53 @@ export default function ImportWizard() {
   const [progressMessage, setProgressMessage] = useState('')
   const [progressValue, setProgressValue] = useState(0)
 
+  const [orgDetails, setOrgDetails] = useState<OrganizationDetails | null>(null);
+
   // Buscar organizações ao montar o componente
   useEffect(() => {
-    getOrganizations()
-      .then(setOrganizations)
-      .catch(error => setError(error.message))
+    const loadOrganizations = async () => {
+      try {
+        const orgs = await getOrganizations()
+        setOrganizations(orgs)
+      } catch (error) {
+        console.error('Erro ao carregar organizações:', error)
+        setError('Não foi possível carregar as organizações')
+      }
+    }
+
+    loadOrganizations()
   }, [])
 
-  // Buscar custom fields quando selecionar uma organização
+  // Modifique o useEffect dos custom fields
   useEffect(() => {
-    if (selectedOrg) {
-      getCustomFields(selectedOrg)
-        .then(setCustomFields)
-        .catch(error => setError(error.message))
-    }
-  }, [selectedOrg])
+    const loadCustomFields = async () => {
+      if (!selectedOrg) return; // Só carrega se tiver uma organização selecionada
+      
+      try {
+        const fields = await getCustomFields(selectedOrg);
+        setCustomFields(fields);
+      } catch (error) {
+        console.error('Erro ao carregar custom fields:', error);
+      }
+    };
+
+    loadCustomFields();
+  }, [selectedOrg]); // Dependência alterada para selectedOrg
+
+  useEffect(() => {
+    const loadOrgDetails = async () => {
+      if (!selectedOrg) return;
+      
+      try {
+        const details = await getOrganizationDetails(selectedOrg);
+        setOrgDetails(details);
+      } catch (error) {
+        console.error('Erro ao carregar detalhes da organização:', error);
+      }
+    };
+
+    loadOrgDetails();
+  }, [selectedOrg]);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     try {
@@ -269,48 +312,52 @@ export default function ImportWizard() {
     maxFiles: 1
   })
 
-  const handleMapping = (csvColumn: string, systemField: string) => {
-    console.log('Mapping:', { csvColumn, systemField }); // Debug
-
-    setMapping(prev => {
-      const newMapping = [...prev]
-      const existingIndex = newMapping.findIndex(m => m.csvColumn === csvColumn)
+  const handleMapping = (header: string, value: string) => {
+    setMapping((prev) => {
+      // Encontrar se já existe um mapeamento para esta coluna
+      const existingIndex = prev.findIndex(m => m.csvColumn === header);
       
       if (existingIndex >= 0) {
-        newMapping[existingIndex] = { csvColumn, systemField }
+        // Atualizar mapeamento existente
+        const newMapping = [...prev];
+        newMapping[existingIndex] = {
+          csvColumn: header,
+          systemField: value
+        };
+        return newMapping;
       } else {
-        newMapping.push({ csvColumn, systemField })
+        // Adicionar novo mapeamento
+        return [...prev, {
+          csvColumn: header,
+          systemField: value
+        }];
       }
-      
-      // Atualizar mappingWithLabels
-      const mappingLabel = systemField === 'Nome' || systemField === 'Telefone'
-        ? systemField
-        : customFields.find(f => f.id === systemField)?.name || systemField;
+    });
 
-      setMappingWithLabels(prev => {
-        const newLabels = [...prev]
-        const existingLabelIndex = newLabels.findIndex(m => m.csvColumn === csvColumn)
-        
-        const newEntry = {
-          csvColumn,
-          systemField,
-          label: mappingLabel,
-          customFieldId: systemField
-        }
-        
-        if (existingLabelIndex >= 0) {
-          newLabels[existingLabelIndex] = newEntry
-        } else {
-          newLabels.push(newEntry)
-        }
-        
-        console.log('Updated Mapping Labels:', newLabels); // Debug
-        return newLabels
-      })
-      
-      return newMapping
-    })
-  }
+    // Atualizar mappingWithLabels também
+    setMappingWithLabels((prev) => {
+      const customField = customFields.find(cf => cf.id === value);
+      const label = customField ? customField.name : 
+                   value === 'Nome' ? 'Nome' :
+                   value === 'Telefone' ? 'Telefone' : value;
+
+      const existingIndex = prev.findIndex(m => m.csvColumn === header);
+      const mappingEntry = {
+        csvColumn: header,
+        systemField: value,
+        label,
+        customFieldId: customField?.id
+      };
+
+      if (existingIndex >= 0) {
+        const newMapping = [...prev];
+        newMapping[existingIndex] = mappingEntry;
+        return newMapping;
+      } else {
+        return [...prev, mappingEntry];
+      }
+    });
+  };
 
   const validateMapping = () => {
     const mappedRequiredFields = REQUIRED_FIELDS.every(field => 
@@ -681,6 +728,26 @@ export default function ImportWizard() {
                 </SelectContent>
               </Select>
 
+              {selectedOrg && orgDetails && (
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg border flex items-center gap-4">
+                  {orgDetails.iconUrl && (
+                    <img 
+                      src={orgDetails.iconUrl} 
+                      alt={orgDetails.name}
+                      className="w-12 h-12 rounded-full object-cover"
+                    />
+                  )}
+                  <div>
+                    <h3 className="font-medium text-gray-900">
+                      {orgDetails.name}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      ID: {orgDetails.id}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {selectedOrg && (
                 <div
                   {...getRootProps()}
@@ -721,13 +788,21 @@ export default function ImportWizard() {
                             <SelectValue placeholder="Selecione um campo" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Nome">Nome</SelectItem>
-                            <SelectItem value="Telefone">Telefone</SelectItem>
-                            {customFields.map(field => (
-                              <SelectItem key={field.id} value={field.id}>
-                                {field.name}
-                              </SelectItem>
-                            ))}
+                            <SelectGroup>
+                              <SelectLabel>Campos Obrigatórios</SelectLabel>
+                              <SelectItem value="Nome">Nome</SelectItem>
+                              <SelectItem value="Telefone">Telefone</SelectItem>
+                            </SelectGroup>
+                            {customFields.length > 0 && (
+                              <SelectGroup>
+                                <SelectLabel>Campos Personalizados</SelectLabel>
+                                {customFields.map(field => (
+                                  <SelectItem key={field.id} value={field.id}>
+                                    {field.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            )}
                           </SelectContent>
                         </Select>
                       </div>

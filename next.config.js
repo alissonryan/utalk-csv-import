@@ -15,7 +15,13 @@ const nextConfig = {
         headers: [
           { 
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+              "style-src 'self' 'unsafe-inline'",
+              "connect-src 'self' https://app-utalk.umbler.com",
+              "img-src 'self' https://utalk-wamedia.s3.amazonaws.com data: blob:",
+            ].join('; ')
           },
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -32,6 +38,9 @@ const nextConfig = {
         destination: 'https://app-utalk.umbler.com/api/:path*'
       }
     ]
+  },
+  images: {
+    domains: ['utalk-wamedia.s3.amazonaws.com']
   }
 }
 
