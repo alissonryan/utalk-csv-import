@@ -1,7 +1,6 @@
 const API_TOKEN = process.env.NEXT_PUBLIC_UTALK_API_TOKEN
 const ORGANIZATION_ID = process.env.NEXT_PUBLIC_UTALK_ORGANIZATION_ID
 
-// Validação mais amigável das credenciais
 if (!API_TOKEN) {
   console.error('API_TOKEN não configurado')
   throw new Error('Configuração incompleta: Token da API não encontrado')
@@ -23,6 +22,7 @@ interface Organization {
   id: string
   name: string
   customFields: CustomField[]
+  iconUrl?: string
 }
 
 interface ContactCustomField {
@@ -116,9 +116,28 @@ interface ImportResults {
   }>;
 }
 
+interface OrganizationDetails {
+  name: string;
+  iconUrl: string;
+  id: string;
+  createdAtUTC: string;
+  financeEmail?: string;
+  financeWhatsapp?: string;
+  cnpj?: string;
+  socialReason?: string;
+  phone?: string;
+}
+
+// Criar classe de erro customizada
+export class ApiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message)
+  }
+}
+
 export async function getOrganizations(): Promise<Organization[]> {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/organizations/${ORGANIZATION_ID}/`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/organizations/${ORGANIZATION_ID}/details/`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${API_TOKEN}`,
@@ -132,33 +151,34 @@ export async function getOrganizations(): Promise<Organization[]> {
     }
     
     const org = await res.json();
-    // Retornar um array com apenas a organização atual
+    // Retornar um array com a organização atual incluindo o iconUrl
     return [{
       id: org.id,
       name: org.name,
-      customFields: []
+      customFields: [],
+      iconUrl: org.iconUrl
     }];
     
   } catch (error) {
     console.error('Erro ao buscar organização:', error)
-    // Fallback para organização padrão em caso de erro
-    return [{
-      id: ORGANIZATION_ID as string,
-      name: 'Minha Organização',
-      customFields: []
-    }]
+    throw error;
   }
 }
 
 export async function getCustomFields(organizationId: string): Promise<CustomField[]> {
+  if (!organizationId) {
+    throw new Error('OrganizationId é obrigatório');
+  }
+
   try {
+    console.log('Buscando campos customizados para org:', organizationId)
+    
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/custom-field-definitions/?organizationId=${organizationId}`, 
       {
         headers: {
           'Authorization': `Bearer ${API_TOKEN}`,
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
+          'Accept': 'application/json'
         },
       }
     )
@@ -170,7 +190,14 @@ export async function getCustomFields(organizationId: string): Promise<CustomFie
     }
 
     const data = await response.json()
-    return data || []
+    console.log('Campos customizados retornados:', data)
+
+    return data.map((field: any) => ({
+      id: field.id,
+      name: field.name,
+      type: field._t,
+      required: false
+    }))
   } catch (error) {
     console.error('Erro completo:', error)
     throw error
@@ -198,6 +225,11 @@ export async function getContactCustomFields(organizationId: string, contactId: 
 
 export async function checkContact(organizationId: string, phone: string): Promise<Contact | null> {
   try {
+    // Validar entrada
+    if (!organizationId || !phone) {
+      throw new ApiError(400, 'ID da organização e telefone são obrigatórios')
+    }
+
     const formattedPhone = phone.replace(/\D/g, '')
     const phoneWithCountry = `+55${formattedPhone}`
 
@@ -254,8 +286,14 @@ export async function checkContact(organizationId: string, phone: string): Promi
     throw new Error('Falha ao verificar contato')
 
   } catch (error) {
-    console.error('Erro ao verificar contato:', error)
-    return null
+    // Logging estruturado
+    console.error({
+      message: 'Erro ao verificar contato',
+      error,
+      organizationId,
+      phone 
+    })
+    throw error
   }
 }
 
@@ -446,3 +484,37 @@ export async function processContacts(
 
   return results
 } 
+
+export async function getOrganizationDetails(organizationId: string): Promise<OrganizationDetails> {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/organizations/${organizationId}/details/`,
+      {
+        headers: {
+          'Authorization': `Bearer ${API_TOKEN}`,
+          'Accept': 'application/json'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Falha ao buscar detalhes da organização');
+    }
+
+    const data = await response.json();
+    return {
+      name: data.name,
+      iconUrl: data.iconUrl,
+      id: data.id,
+      createdAtUTC: data.createdAtUTC,
+      financeEmail: data.financeEmail || '',
+      financeWhatsapp: data.financeWhatsapp || '',
+      cnpj: data.cnpj || '',
+      socialReason: data.socialReason || '',
+      phone: data.phone || ''
+    };
+  } catch (error) {
+    console.error('Erro ao buscar detalhes da organização:', error);
+    throw error;
+  }
+}
