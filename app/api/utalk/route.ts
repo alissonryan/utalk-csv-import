@@ -21,6 +21,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json(await response.json())
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 })
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+    return NextResponse.json({ error: 'Erro desconhecido' }, { status: 400 })
   }
 } 

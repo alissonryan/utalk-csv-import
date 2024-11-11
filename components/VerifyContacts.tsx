@@ -14,7 +14,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "./ui/dialog"
+} from "@/components/ui/dialog"
 import { Progress } from "./ui/progress"
 import * as XLSX from 'xlsx'
 import { getOrganizationDetails } from '@/lib/api'
