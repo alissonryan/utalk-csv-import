@@ -128,6 +128,13 @@ interface OrganizationDetails {
   phone?: string;
 }
 
+// Criar classe de erro customizada
+export class ApiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message)
+  }
+}
+
 export async function getOrganizations(): Promise<Organization[]> {
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/v1/organizations/${ORGANIZATION_ID}/details/`, {
@@ -218,6 +225,11 @@ export async function getContactCustomFields(organizationId: string, contactId: 
 
 export async function checkContact(organizationId: string, phone: string): Promise<Contact | null> {
   try {
+    // Validar entrada
+    if (!organizationId || !phone) {
+      throw new ApiError(400, 'ID da organização e telefone são obrigatórios')
+    }
+
     const formattedPhone = phone.replace(/\D/g, '')
     const phoneWithCountry = `+55${formattedPhone}`
 
@@ -274,8 +286,14 @@ export async function checkContact(organizationId: string, phone: string): Promi
     throw new Error('Falha ao verificar contato')
 
   } catch (error) {
-    console.error('Erro ao verificar contato:', error)
-    return null
+    // Logging estruturado
+    console.error({
+      message: 'Erro ao verificar contato',
+      error,
+      organizationId,
+      phone 
+    })
+    throw error
   }
 }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
 import Papa from 'papaparse'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -17,6 +17,8 @@ import {
 } from "./ui/dialog"
 import { Progress } from "./ui/progress"
 import * as XLSX from 'xlsx'
+import { getOrganizationDetails } from '@/lib/api'
+import type { OrganizationDetails } from '@/lib/types'
 
 interface Contact {
   name: string
@@ -53,6 +55,20 @@ export function VerifyContacts() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [processedCount, setProcessedCount] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
+  const [organization, setOrganization] = useState<OrganizationDetails | null>(null)
+
+  useEffect(() => {
+    async function loadOrganization() {
+      try {
+        const orgDetails = await getOrganizationDetails(process.env.NEXT_PUBLIC_UTALK_ORGANIZATION_ID!)
+        setOrganization(orgDetails)
+      } catch (error) {
+        console.error('Erro ao carregar organização:', error)
+      }
+    }
+    
+    loadOrganization()
+  }, [])
 
   const verifyContact = async (phone: string): Promise<Contact | null> => {
     try {
@@ -194,8 +210,31 @@ export function VerifyContacts() {
 
   return (
     <div className="h-full flex flex-col w-full">
-      <div className="flex justify-between items-center mb-6">
+      <div className="space-y-6 mb-6">
         <h1 className="text-2xl font-bold">Verificar Contatos</h1>
+
+        {/* Card da Organização no novo padrão */}
+        {organization && (
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+            <div className="flex items-center gap-3">
+              {organization.iconUrl && (
+                <img 
+                  src={organization.iconUrl} 
+                  alt={organization.name}
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              )}
+              <div className="flex flex-col">
+                <span className="font-medium">{organization.name}</span>
+                <span className="text-sm text-gray-500">
+                  ID: {organization.id}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Botões de download movidos para depois do card */}
         {contacts.length > 0 && (
           <div className="flex gap-2">
             <Button 
