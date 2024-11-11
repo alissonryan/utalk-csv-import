@@ -521,13 +521,24 @@ export default function ImportWizard() {
           } catch (error) {
             console.error('Erro ao criar contato:', error)
             results.errors++
+            
+            // Aqui está a correção - usando as variáveis do escopo correto
+            const errorNameValue = Object.entries(contact.csvData).find(([key]) => 
+              mappingWithLabels.find(m => m.csvColumn === key)?.systemField === 'Nome'
+            )?.[1]
+            
+            const errorPhoneValue = Object.entries(contact.csvData).find(([key]) => 
+              mappingWithLabels.find(m => m.csvColumn === key)?.systemField === 'Telefone'
+            )?.[1]
+
             results.details.push({
               row: processed + 1,
               error: error instanceof Error ? error.message : 'Erro desconhecido',
-              name: nameValue || undefined,
-              phone: phoneValue || undefined
+              name: errorNameValue,
+              phone: errorPhoneValue
             })
           }
+          processed++
         }
 
         // Processar contatos existentes
