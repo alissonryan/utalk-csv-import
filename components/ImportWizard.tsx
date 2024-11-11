@@ -330,7 +330,7 @@ export default function ImportWizard() {
     try {
       setCurrentStep(STEPS.PROCESSING)
       
-      // Simulaão do processo de importação
+      // Simulação do processo de importação
       let progress = 0
       const interval = setInterval(() => {
         progress += 10
@@ -343,8 +343,18 @@ export default function ImportWizard() {
             success: preview.length - 2,
             errors: 2,
             details: [
-              { row: 3, error: 'Telefone inválido' },
-              { row: 7, error: 'Nome em branco' }
+              { 
+                row: 3, 
+                error: 'Telefone inválido',
+                name: 'Nome do Contato',
+                phone: '123456789'
+              },
+              { 
+                row: 7, 
+                error: 'Nome em branco',
+                name: undefined,
+                phone: undefined
+              }
             ]
           })
           setCurrentStep(STEPS.RESULTS)
