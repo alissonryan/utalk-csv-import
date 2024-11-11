@@ -275,6 +275,10 @@ export default function ImportWizard() {
     loadOrgDetails();
   }, [selectedOrg]);
 
+  useEffect(() => {
+    setSelectedOrg(process.env.NEXT_PUBLIC_UTALK_ORGANIZATION_ID as string);
+  }, []);
+
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     try {
       const file = acceptedFiles[0]
@@ -712,24 +716,10 @@ export default function ImportWizard() {
           {currentStep === STEPS.UPLOAD && (
             <div className="space-y-4">
               <h2 className="text-xl font-semibold">Organização</h2>
-              <Select
-                value={selectedOrg}
-                onValueChange={setSelectedOrg}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione uma organização" />
-                </SelectTrigger>
-                <SelectContent>
-                  {organizations.map(org => (
-                    <SelectItem key={org.id} value={org.id}>
-                      {org.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {selectedOrg && orgDetails && (
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg border flex items-center gap-4">
+              
+              {/* Card com detalhes da organização */}
+              {orgDetails && (
+                <div className="bg-white rounded-lg border p-4 flex items-center gap-4">
                   {orgDetails.iconUrl && (
                     <img 
                       src={orgDetails.iconUrl} 
@@ -747,25 +737,24 @@ export default function ImportWizard() {
                   </div>
                 </div>
               )}
-
-              {selectedOrg && (
-                <div
-                  {...getRootProps()}
-                  className={cn(
-                    "mt-6 border-2 border-dashed rounded-lg p-8 text-center cursor-pointer",
-                    isDragActive ? "border-primary bg-primary/5" : "border-gray-300"
-                  )}
-                >
-                  <input {...getInputProps()} />
-                  <div className="flex flex-col items-center gap-2">
-                    <svg className="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
-                    <p className="text-lg">Arraste um arquivo CSV ou clique para selecionar</p>
-                    <p className="text-sm text-gray-500">Máximo: 5MB</p>
-                  </div>
+              
+              {/* Área de upload do arquivo */}
+              <div
+                {...getRootProps()}
+                className={cn(
+                  "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer",
+                  isDragActive ? "border-primary bg-primary/5" : "border-gray-300"
+                )}
+              >
+                <input {...getInputProps()} />
+                <div className="flex flex-col items-center gap-2">
+                  <svg className="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  <p className="text-lg">Arraste um arquivo CSV ou clique para selecionar</p>
+                  <p className="text-sm text-gray-500">Máximo: 5MB</p>
                 </div>
-              )}
+              </div>
             </div>
           )}
 
