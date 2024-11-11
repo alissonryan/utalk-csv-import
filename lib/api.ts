@@ -126,11 +126,11 @@ interface OrganizationDetails {
   iconUrl: string;
   id: string;
   createdAtUTC: string;
-  financeEmail: string | null;
-  financeWhatsapp: string | null;
-  cnpj: string | null;
-  socialReason: string | null;
-  phone: string | null;
+  financeEmail?: string;
+  financeWhatsapp?: string;
+  cnpj?: string;
+  socialReason?: string;
+  phone?: string;
 }
 
 export async function getOrganizations(): Promise<Organization[]> {
@@ -493,7 +493,12 @@ export async function getOrganizationDetails(organizationId: string): Promise<Or
       name: data.name,
       iconUrl: data.iconUrl,
       id: data.id,
-      createdAtUTC: data.createdAtUTC
+      createdAtUTC: data.createdAtUTC,
+      financeEmail: data.financeEmail || '',
+      financeWhatsapp: data.financeWhatsapp || '',
+      cnpj: data.cnpj || '',
+      socialReason: data.socialReason || '',
+      phone: data.phone || ''
     };
   } catch (error) {
     console.error('Erro ao buscar detalhes da organização:', error);
