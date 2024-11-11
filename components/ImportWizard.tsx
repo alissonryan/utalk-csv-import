@@ -903,7 +903,7 @@ export default function ImportWizard() {
               </div>
 
               {/* Lista de Erros (se houver) */}
-              {results?.errors > 0 && results.details.length > 0 && (
+              {results && results.errors > 0 && results.details && results.details.length > 0 && (
                 <div className="mt-6">
                   <h3 className="text-lg font-medium mb-4">Detalhes dos Erros</h3>
                   <div className="border rounded-lg overflow-hidden">
